@@ -96,7 +96,7 @@ class App(tk.Tk):
 
                 # "--embed-info-json", 
 
-                #"--embed-thumbnail","--convert-thumbnails", "png", 
+                "--embed-thumbnail","--convert-thumbnails", "png", 
 
                 #"--print", "filename",
 
