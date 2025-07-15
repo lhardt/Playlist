@@ -32,6 +32,7 @@ class App(tk.Tk):
     def print(self, text):
         self.output_widget.insert('end', "\n")
         self.output_widget.insert('end', text)
+        self.output_widget.yview(tk.END)
 
     def clear(self, event=None):
         self.output_widget.delete('0.0', tk.END)
@@ -242,12 +243,9 @@ class App(tk.Tk):
 
         self.list_filename = None
         self.current_list_item_index = None
-        
-
 
         self.title("Nosso Downloader!")
         self.resizable()
-
 
         small_paddings = {'padx': 10, 'pady': 10}
         paddings_outer = {'padx': 10, 'pady': 10}
