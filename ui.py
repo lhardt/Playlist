@@ -15,12 +15,13 @@ class App(tk.Tk):
 
     def add_input(self, frame, label_text, input, row, paddings):
         label = ttk.Label(frame, text=label_text)
+
         label.grid(column=0, row=row, sticky="E", **paddings)
         input.grid(column=1, row=row, sticky="WE", **paddings)
 
     def set_context_title(self, title):
         partial_title = "Nosso Downloader"
-        
+
         if self.usinglist_var.get() :
             partial_title = partial_title + " - " + self.filename_var.get()
 
@@ -54,7 +55,7 @@ class App(tk.Tk):
         with open(info_filename, 'r', encoding="utf-8") as file:
             info = json.load(file)
         
-        info['artists'] = artist
+        info['artist'] = artist
         info['album'] = album
         info['track'] = name
 
