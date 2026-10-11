@@ -1,5 +1,5 @@
 import tkinter as tk
-import tkinter.ttk as ttk
+import ttkbootstrap as ttk
 import threading
 import tkinter.filedialog as fdialog
 import urllib.parse
@@ -7,11 +7,16 @@ import subprocess
 import webbrowser
 import os
 import json
+import sys
 
 
+DEFAULT_THEME = 'solarized-light'
 
+class App(ttk.App):
 
-class App(tk.Tk): 
+    def switch_theme(self):
+        theme_name = self.theme_dropdown.get()
+        self.theme_use(theme_name)
 
     def add_input(self, frame, label_text, input, row, paddings):
         label = ttk.Label(frame, text=label_text)
@@ -21,9 +26,6 @@ class App(tk.Tk):
 
     def set_context_title(self, title):
         partial_title = "Nosso Downloader"
-
-        if self.usinglist_var.get() :
-            partial_title = partial_title + " - " + self.filename_var.get()
 
         if title is not None and title != '':
             partial_title = partial_title + " - " + title
@@ -54,7 +56,7 @@ class App(tk.Tk):
         info = {}
         with open(info_filename, 'r', encoding="utf-8") as file:
             info = json.load(file)
-        
+
         info['artist'] = artist
         info['album'] = album
         info['track'] = name
@@ -95,7 +97,7 @@ class App(tk.Tk):
             return
 
 
-        download_info_args = ["python", "-m", "yt_dlp",  "--audio-format", "mp3",
+        download_info_args = [sys.executable, "-m", "yt_dlp",  "--audio-format", "mp3",
                               "--audio-quality", "320k", "--extract-audio",
                               '-o', 'fileinfothing',
                               "--embed-thumbnail", "--embed-metadata", "--embed-subs",
@@ -105,12 +107,12 @@ class App(tk.Tk):
         self.print("Baixando dados do vídeo!")
         
         result = subprocess.run(download_info_args, 
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,shell=True)
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
-        self.print(result.stdout.decode("cp1252"))
-        self.print(result.stderr.decode("cp1252"))
+        self.print(result.stdout.decode("utf8"))
+        self.print(result.stderr.decode("utf8"))
         
-        result_str = result.stdout.decode("cp1252")
+        result_str = result.stdout.decode("utf8")
 
         info_filename = result_str[  
                 result_str.find("Writing video metadata as JSON to: ") + len("Writing video metadata as JSON to: ") :
@@ -126,7 +128,7 @@ class App(tk.Tk):
 
         self.update_info_file(info_filename,name,artist,album,filename)
 
-        args = ["python", "-m", "yt_dlp", 
+        args = [sys.executable, "-m", "yt_dlp", 
                 # "-f" "\"bestaudio\""
 
                 "--audio-format", "mp3",
@@ -134,7 +136,7 @@ class App(tk.Tk):
                 "--extract-audio", 
 
                 "--no-write-info-json", "--load-info-json", info_filename,
-                
+
                 "--embed-metadata",
                 #"--embed-subs",
 
@@ -148,99 +150,15 @@ class App(tk.Tk):
                 ]
 
         self.print("Baixando o vídeo!")
-        result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,shell=True)
+        result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.print(result.stdout)
         self.print(result.stderr)
         
         self.print(f"---- Finalizado:  {filename} -----")
         self.set_context_title("")
 
-        self.set_next_item_from_list()
-
-    def set_next_item_index_to_download(self,list_items):
-
-        i = 0
-
-        previous_i = self.current_list_item_index
-        if previous_i == None:
-            previous_i = -1
-
-        for item in list_items:
-            if ('downloaded' not in item) and ( i > previous_i ) :
-              self.current_list_item_index = i
-              return i
-            i += 1
-
-        self.current_list_item_index = None
-        return None
-
-    def mark_current_item_as_downloaded(self):
-        if self.current_list_item_index is not None:
-            list_data = []
-            
-            # Read
-            with open( self.listfilename_var.get() , 'r', encoding='utf-8' ) as current_listfile:
-                list_data = json.load(current_listfile)
-
-            list_data[self.current_list_item_index]['link'] = self.url_var.get()
-            list_data[self.current_list_item_index]['downloaded'] = True
-
-
-            # Save
-            with open( self.listfilename_var.get() , 'w', encoding='utf-8' ) as current_listfile:
-                json.dump(list_data,current_listfile)
-
-
-    def set_next_item_from_list(self):
-        self.mark_current_item_as_downloaded()
-
-        if self.usinglist_var.get() is True:
-
-            list_data = []
-            with open( self.listfilename_var.get() , 'r', encoding='utf-8' ) as current_listfile:
-                list_data = json.load(current_listfile)
-
-            self.set_next_item_index_to_download(list_data)
-
-            list_item = list_data[ self.current_list_item_index ]
-
-            self.artist_var.set( list_item['artists'] )
-            self.name_var.set( list_item['title'] )
-            self.album_var.set( list_item['album'] )
-            self.url_var.set( "" )
-
-            self.print(f"Editando agora arquivo \"{ list_item['title'] }\" ")
-
-    def on_usinglist_change(self):
-        if self.usinglist_var.get() :
-            #self.usinglist_var.set(False)
-            file = fdialog.askopenfile( initialdir= os.getcwd() )
-            if file is None:
-                self.usinglist_var.set(False)
-                self.current_list_item_index = None
-            else:
-                self.listfilename_var.set(str(file.name))
-                file.close()
-
-                #self.songname_entry.configure(state=tk.DISABLED)
-                #self.album_entry.configure(state=tk.DISABLED)
-                #self.artist_entry.configure(state=tk.DISABLED)
-
-                self.set_next_item_from_list()
-
-        else:
-            # can jeopardize save process self.listfilename_var.set("")
-            self.songname_entry.configure(state=tk.NORMAL)
-            self.album_entry.configure(state=tk.NORMAL)
-            self.artist_entry.configure(state=tk.NORMAL)
-
-            #self.usinglist_var.set(True)
-
-    def on_listfilename_change(self, *args):
-        self.listfile_checkbox.configure(text= self.listfilename_var.get())
-
-    def __init__(self):
-        super().__init__()
+    def __init__(self, theme=DEFAULT_THEME):
+        super().__init__(theme=theme)
 
         self.list_filename = None
         self.current_list_item_index = None
@@ -250,23 +168,24 @@ class App(tk.Tk):
 
         small_paddings = {'padx': 10, 'pady': 10}
         paddings_outer = {'padx': 10, 'pady': 10}
+        padding_outer = 10
         paddings = {'padx': 0, 'pady': 5}
 
         outer_pane = tk.Frame(self)
         outer_pane.pack(expand=True, fill='x', **small_paddings)
         
-        left_frame = tk.LabelFrame(outer_pane, text="Nosso Conversor, gatinha!", **paddings_outer)
+        left_frame = ttk.LabelFrame(outer_pane, text="Nosso Conversor, gatinha!", padding=padding_outer)
         left_frame.pack(fill='x', expand=True, side="left")
 
-        right_frame = tk.LabelFrame(outer_pane, text="Mensagens:", **paddings_outer)
+        right_frame = ttk.LabelFrame(outer_pane, text="Mensagens:", padding=padding_outer)
         right_frame.pack(side="right", fill="y")
 
-        self.footer_image = tk.PhotoImage( file = os.getcwd() +  "\\cat.png")
+        self.footer_image = tk.PhotoImage( file = os.getcwd() + os.sep +  "cat.png")
 
-        self.footer_label = tk.Label(left_frame, image=self.footer_image)
+        self.footer_label = ttk.Label(left_frame, image=self.footer_image)
         self.footer_label.photo = self.footer_image
         
-        frame = tk.Frame(left_frame)
+        frame = ttk.Frame(left_frame)
 
         frame.pack(fill='x')
     
@@ -280,15 +199,9 @@ class App(tk.Tk):
         self.album_var = tk.StringVar()
         self.artist_var = tk.StringVar()
         self.filename_var = tk.StringVar()
-        self.usinglist_var = tk.BooleanVar()
         self.listfilename_var = tk.StringVar()
         self.describing_var = tk.StringVar()
-        
-        #ttk.Label(self, textvariable=self.describing_var).pack(**paddings_outer, anchor="center")
 
-        self.listfile_checkbox = ttk.Checkbutton(frame, variable=self.usinglist_var, command=self.on_usinglist_change)
-
-        self.listfilename_var.trace_add('write', self.on_listfilename_change)
         self.name_var.trace_add('write',self.recompose_filename)
         self.artist_var.trace_add('write',self.recompose_filename)
 
@@ -299,17 +212,22 @@ class App(tk.Tk):
         self.songname_entry = ttk.Entry(frame, textvariable=self.name_var )
         self.artist_entry = ttk.Entry(frame, textvariable=self.artist_var )
         self.album_entry = ttk.Entry(frame, textvariable=self.album_var )
+        self.theme_dropdown = ttk.Combobox(frame, values=ttk.Style().theme_names(), state="readonly")
 
-        self.add_input(frame, "Usando uma Lista:", self.listfile_checkbox, 0, paddings)
-        self.add_input(frame, "Pasta:", self.folder_entry, 1, paddings)
-        self.add_input(frame, "URL do Youtube:", self.url_entry, 2, paddings)
-        self.add_input(frame, "Nome da Música:", self.songname_entry, 3, paddings)
-        self.add_input(frame, "Nome do Artista:", self.artist_entry, 4, paddings)
-        self.add_input(frame, "Nome do Álbum:", self.album_entry, 5, paddings)
-        self.add_input(frame, "Nome do Arquivo:", ttk.Entry(frame, textvariable=self.filename_var ), 6, paddings)
-    
-    
-        self.youtube_link = tk.Label(self, fg="blue", cursor="hand2")
+        app = self
+        #theme_dropdown.pack(padx=10, pady=0, fill='x' , expand=True)
+        self.theme_dropdown.bind("<<ComboboxSelected>>", lambda _ : app.switch_theme())
+        #self.theme_dropdown = theme_dropdown
+
+        self.add_input(frame, "Tema:", self.theme_dropdown, 1, paddings)
+        self.add_input(frame, "Pasta:", self.folder_entry, 2, paddings)
+        self.add_input(frame, "URL do Youtube:", self.url_entry, 3, paddings)
+        self.add_input(frame, "Nome da Música:", self.songname_entry, 4, paddings)
+        self.add_input(frame, "Nome do Artista:", self.artist_entry, 5, paddings)
+        self.add_input(frame, "Nome do Álbum:", self.album_entry, 6, paddings)
+        self.add_input(frame, "Nome do Arquivo:", ttk.Entry(frame, textvariable=self.filename_var ), 7, paddings)
+
+        self.youtube_link = ttk.Label(self, foreground="blue", cursor="hand2")
         self.youtube_link.pack(anchor='center' ,**paddings_outer)
         self.youtube_link.bind("<Button-1>", self.on_click_youtube_link)
 
@@ -326,6 +244,8 @@ class App(tk.Tk):
 
         go_button = ttk.Button(right_frame, text="Limpar texto (F2)", command=self.clear)
         go_button.pack(fill='x', **paddings_outer)
+
+
         self.bind("<F2>", self.clear)
 
         self.footer_label.pack(anchor="center")
